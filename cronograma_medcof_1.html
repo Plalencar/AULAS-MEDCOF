@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cronograma MEDCOF</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0b0d12;--surface:#12151c;--surface2:#191d27;--surface3:#1f2433;
+  --border:#252a38;--border2:#2e3447;
+  --text:#e4e8f4;--muted:#5c6480;--muted2:#8890ac;
+  --cir:#e05252;--clin:#4a90e2;--go:#9b6fe0;--ped:#3db87a;--prev:#f0a832;--neuro:#e06bb0;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;min-height:100vh}
+
+/* NAV */
+.nav{display:flex;align-items:stretch;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:200;flex-wrap:wrap}
+.nav-brand{padding:0 24px;font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:#fff;border-right:1px solid var(--border);display:flex;align-items:center;letter-spacing:-.01em;white-space:nowrap}
+.nav-tabs{display:flex}
+.nav-tab{padding:0 24px;height:50px;display:flex;align-items:center;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{color:#fff;border-bottom-color:var(--clin)}
+.nav-right{margin-left:auto;display:flex;align-items:center;padding:0 18px;gap:10px}
+.progress-pill{background:var(--surface3);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11px;font-family:'Syne',sans-serif;font-weight:700;color:var(--muted2);white-space:nowrap}
+.progress-pill span{color:#fff}
+.reset-btn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:5px 11px;font-size:11px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap}
+.reset-btn:hover{border-color:var(--cir);color:var(--cir)}
+
+/* PAGES */
+.page{display:none}
+.page.active{display:block}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:10px;padding:14px 28px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap;align-items:center}
+.search-wrap{flex:1;min-width:180px;position:relative}
+.search-wrap input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 14px 8px 34px;font-size:13px;font-family:inherit;outline:none;transition:border-color .2s}
+.search-wrap input:focus{border-color:var(--clin)}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.35;pointer-events:none}
+.filter-btns{display:flex;gap:5px;flex-wrap:wrap}
+.fbtn{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:6px 12px;font-size:10px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap;letter-spacing:.04em}
+.fbtn:hover{color:var(--text);border-color:var(--border2)}
+.fbtn.active{color:#fff;border-color:transparent}
+.fbtn[data-area=all].active{background:var(--surface3);color:var(--text)}
+.fbtn[data-area=cirurgia].active{background:var(--cir)}
+.fbtn[data-area=clinica].active{background:var(--clin)}
+.fbtn[data-area=go].active{background:var(--go)}
+.fbtn[data-area=pediatria].active{background:var(--ped)}
+.fbtn[data-area=preventiva].active{background:var(--prev);color:#000}
+.fbtn[data-area=neurocomp].active{background:var(--neuro)}
+
+/* MAIN */
+main{padding:24px 28px;max-width:1400px}
+.area-section{margin-bottom:40px}
+.area-section.hidden{display:none}
+.area-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.area-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.area-title{font-family:'Syne',sans-serif;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.area-progress-wrap{display:flex;align-items:center;gap:7px;margin-left:2px}
+.area-bar-bg{width:72px;height:3px;background:var(--surface3);border-radius:4px;overflow:hidden}
+.area-bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.area-pct{font-size:10px;color:var(--muted2);font-family:'Syne',sans-serif;font-weight:700}
+
+.cirurgia .area-dot{background:var(--cir)} .cirurgia .area-bar-fill{background:var(--cir)}
+.clinica .area-dot{background:var(--clin)} .clinica .area-bar-fill{background:var(--clin)}
+.go .area-dot{background:var(--go)} .go .area-bar-fill{background:var(--go)}
+.pediatria .area-dot{background:var(--ped)} .pediatria .area-bar-fill{background:var(--ped)}
+.preventiva .area-dot{background:var(--prev)} .preventiva .area-bar-fill{background:var(--prev)}
+.neurocomp .area-dot{background:var(--neuro)} .neurocomp .area-bar-fill{background:var(--neuro)}
+
+.blocos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:9px}
+
+/* CARDS */
+.bloco-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.bloco-card:hover{border-color:var(--border2);box-shadow:0 4px 20px rgba(0,0,0,.28)}
+.bloco-header{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;cursor:pointer;user-select:none;border-bottom:1px solid transparent;transition:background .15s}
+.bloco-header:hover{background:var(--surface2)}
+.bloco-header.open{border-bottom-color:var(--border)}
+.bloco-left{display:flex;align-items:center;gap:9px}
+.bloco-mini-wrap{display:flex;flex-direction:column;gap:2px}
+.bloco-mini-bg{width:28px;height:2.5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.bloco-mini-fill{height:100%;border-radius:3px;transition:width .3s}
+.bloco-label{font-family:'Syne',sans-serif;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.bloco-right{display:flex;align-items:center;gap:7px}
+.bloco-frac{font-size:10px;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700}
+.bloco-arrow{width:13px;height:13px;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.bloco-header.open .bloco-arrow{transform:rotate(180deg)}
+.bloco-body{display:none;padding:6px 11px 11px}
+.bloco-body.open{display:block}
+
+/* AULA */
+.aula-item{display:flex;align-items:flex-start;gap:8px;padding:5px 4px;border-radius:6px;cursor:pointer;transition:background .12s}
+.aula-item:hover{background:var(--surface2)}
+.aula-item.done .aula-name{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(92,100,128,.5)}
+.aula-check{width:15px;height:15px;border:1.5px solid var(--border2);border-radius:4px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.aula-item.done .aula-check{border-color:transparent;background:currentColor}
+.aula-check svg{opacity:0;width:9px;height:9px;transition:opacity .12s;stroke:white}
+.aula-item.done .aula-check svg{opacity:1}
+.aula-name{font-size:12px;color:#b8c2d8;flex:1;line-height:1.45}
+mark{background:rgba(240,200,50,.22);color:inherit;border-radius:2px;padding:0 1px}
+
+.aula-item.cirurgia .aula-check{color:var(--cir)}
+.aula-item.clinica .aula-check{color:var(--clin)}
+.aula-item.go .aula-check{color:var(--go)}
+.aula-item.pediatria .aula-check{color:var(--ped)}
+.aula-item.preventiva .aula-check{color:var(--prev)}
+.aula-item.neurocomp .aula-check{color:var(--neuro)}
+
+.cirurgia .bloco-label{color:var(--cir)} .cirurgia .bloco-mini-fill{background:var(--cir)}
+.clinica .bloco-label{color:var(--clin)} .clinica .bloco-mini-fill{background:var(--clin)}
+.go .bloco-label{color:var(--go)} .go .bloco-mini-fill{background:var(--go)}
+.pediatria .bloco-label{color:var(--ped)} .pediatria .bloco-mini-fill{background:var(--ped)}
+.preventiva .bloco-label{color:var(--prev)} .preventiva .bloco-mini-fill{background:var(--prev)}
+.neurocomp .bloco-label{color:var(--neuro)} .neurocomp .bloco-mini-fill{background:var(--neuro)}
+
+.no-results{display:none;text-align:center;padding:60px 0;color:var(--muted)}
+.no-results.visible{display:block}
+
+/* DASHBOARD */
+.dash{padding:24px 28px;max-width:1400px}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.stat-label{font-size:9px;font-family:'Syne',sans-serif;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.stat-value{font-family:'Syne',sans-serif;font-size:1.9rem;font-weight:800;color:#fff;line-height:1}
+.stat-sub{font-size:10px;color:var(--muted2);margin-top:3px}
+
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dash-grid .wide{grid-column:1/-1}
+@media(max-width:820px){.dash-grid{grid-template-columns:1fr}.dash-grid .wide{grid-column:1}}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px}
+.chart-title{font-family:'Syne',sans-serif;font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted2);margin-bottom:16px}
+.chart-wrap canvas{max-height:260px}
+.donut-row{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.donut-wrap{flex:0 0 180px;display:flex;align-items:center;justify-content:center}
+.breakdown{flex:1;min-width:200px}
+.ab-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)}
+.ab-row:last-child{border:none}
+.ab-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.ab-name{font-size:12px;color:var(--muted2);flex:1}
+.ab-bar-bg{width:90px;height:3px;background:var(--surface3);border-radius:4px;overflow:hidden}
+.ab-bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
+.ab-nums{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:var(--text);width:48px;text-align:right}
+
+@media(max-width:600px){
+  .nav-brand{padding:0 14px;font-size:13px}
+  .nav-tab{padding:0 14px;font-size:10px}
+  .toolbar,.dash{padding:12px}
+  main{padding:14px}
+  .blocos-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-brand">📚 MEDCOF</div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-tab="cronograma">Cronograma</div>
+    <div class="nav-tab" data-tab="dashboard">📊 Desempenho</div>
+  </div>
+  <div class="nav-right">
+    <div class="progress-pill">Progresso: <span id="globalPct">0%</span></div>
+    <button class="reset-btn" id="resetBtn">↺ Zerar</button>
+  </div>
+</div>
+
+<!-- CRONOGRAMA -->
+<div class="page active" id="page-cronograma">
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="Buscar aula… ex: trauma, diabetes, apendicite" autocomplete="off">
+    </div>
+    <div class="filter-btns">
+      <button class="fbtn active" data-area="all">Todas</button>
+      <button class="fbtn" data-area="cirurgia">🔴 Cirurgia</button>
+      <button class="fbtn" data-area="clinica">🔵 Clínica Médica</button>
+      <button class="fbtn" data-area="go">🟣 GO</button>
+      <button class="fbtn" data-area="pediatria">🟢 Pediatria</button>
+      <button class="fbtn" data-area="preventiva">🟡 Preventiva</button>
+      <button class="fbtn" data-area="neurocomp">🩷 Neuro/Comp.</button>
+    </div>
+  </div>
+  <main>
+    <div class="no-results" id="noResults">Nenhuma aula encontrada.</div>
+    <div class="area-section cirurgia" data-area="cirurgia">
+      <div class="area-header"><div class="area-dot"></div><span class="area-title">Cirurgia</span><div class="area-progress-wrap"><div class="area-bar-bg"><div class="area-bar-fill" id="bar-cirurgia" style="width:0%"></div></div><span class="area-pct" id="pct-cirurgia">0%</span></div></div>
+      <div class="blocos-grid" id="blocos-cirurgia"></div>
+    </div>
+    <div class="area-section clinica" data-area="clinica">
+      <div class="area-header"><div class="area-dot"></div><span class="area-title">Clínica Médica</span><div class="area-progress-wrap"><div class="area-bar-bg"><div class="area-bar-fill" id="bar-clinica" style="width:0%"></div></div><span class="area-pct" id="pct-clinica">0%</span></div></div>
+      <div class="blocos-grid" id="blocos-clinica"></div>
+    </div>
+    <div class="area-section go" data-area="go">
+      <div class="area-header"><div class="area-dot"></div><span class="area-title">Ginecologia &amp; Obstetrícia</span><div class="area-progress-wrap"><div class="area-bar-bg"><div class="area-bar-fill" id="bar-go" style="width:0%"></div></div><span class="area-pct" id="pct-go">0%</span></div></div>
+      <div class="blocos-grid" id="blocos-go"></div>
+    </div>
+    <div class="area-section pediatria" data-area="pediatria">
+      <div class="area-header"><div class="area-dot"></div><span class="area-title">Pediatria</span><div class="area-progress-wrap"><div class="area-bar-bg"><div class="area-bar-fill" id="bar-pediatria" style="width:0%"></div></div><span class="area-pct" id="pct-pediatria">0%</span></div></div>
+      <div class="blocos-grid" id="blocos-pediatria"></div>
+    </div>
+    <div class="area-section preventiva" data-area="preventiva">
+      <div class="area-header"><div class="area-dot"></div><span class="area-title">Preventiva &amp; Social</span><div class="area-progress-wrap"><div class="area-bar-bg"><div class="area-bar-fill" id="bar-preventiva" style="width:0%"></div></div><span class="area-pct" id="pct-preventiva">0%</span></div></div>
+      <div class="blocos-grid" id="blocos-preventiva"></div>
+    </div>
+    <div class="area-section neurocomp" data-area="neurocomp">
+      <div class="area-header"><div class="area-dot"></div><span class="area-title">Neuro-Ped / Complementar</span><div class="area-progress-wrap"><div class="area-bar-bg"><div class="area-bar-fill" id="bar-neurocomp" style="width:0%"></div></div><span class="area-pct" id="pct-neurocomp">0%</span></div></div>
+      <div class="blocos-grid" id="blocos-neurocomp"></div>
+    </div>
+  </main>
+</div>
+
+<!-- DASHBOARD -->
+<div class="page" id="page-dashboard">
+  <div class="dash">
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-label">Total de Aulas</div><div class="stat-value" id="s-total">0</div><div class="stat-sub">no cronograma</div></div>
+      <div class="stat-card"><div class="stat-label">Assistidas</div><div class="stat-value" id="s-done" style="color:var(--ped)">0</div><div class="stat-sub">concluídas</div></div>
+      <div class="stat-card"><div class="stat-label">Progresso</div><div class="stat-value" id="s-pct" style="color:var(--clin)">0%</div><div class="stat-sub">do total</div></div>
+      <div class="stat-card"><div class="stat-label">Restantes</div><div class="stat-value" id="s-rest" style="color:var(--muted2)">0</div><div class="stat-sub">a assistir</div></div>
+    </div>
+    <div class="dash-grid">
+      <div class="chart-card wide">
+        <div class="donut-row">
+          <div>
+            <div class="chart-title">Progresso Geral</div>
+            <div class="donut-wrap" style="height:180px"><canvas id="chartDonut"></canvas></div>
+          </div>
+          <div class="breakdown">
+            <div class="chart-title">Por Área</div>
+            <div id="areaBreakdown"></div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Aulas Assistidas por Área</div>
+        <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Cobertura por Área (%)</div>
+        <div class="chart-wrap"><canvas id="chartRadar"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = {
+  cirurgia:{
+    1:["Cirurgia Infantil Vomitos no RN lactente","Cirurgia Infantil CIPE no PS","Endoscopia Preparo de Colon","Endoscopia Polipos colorretais","Endoscopia CA colorretal precoce"],
+    2:["Trauma Revisão ABCDE","Trauma Trauma de Tórax","Trauma Trauma de Tórax II","Trauma Medidas Auxiliares e FAST","Trauma Populações Especiais"],
+    3:["Trauma Trauma Abdominal Penetrante","Trauma Trauma Abdominal Contuso","Cabeça e Pescoço Tireóide I - anatomia, fisiologia e tireoidites","Cabeça e Pescoço Tireóide II - nódulo e bócio","Cabeça e Pescoço Tireóide III - carcinoma bem diferenciado","Cabeça e Pescoço Tireóide IV - carcinoma medular e anaplásico","Cabeça e Pescoço Tireóide V - tireoidectomia"],
+    4:["Trauma Trauma Abdominal específico - PARTE 1","Trauma Trauma Abdominal específico - PARTE 2","Trauma Trauma de pelve","Trauma Trauma Cervical","Trauma Trauma Cervical específico","Cabeça e Pescoço Paratireoide I - conceitos iniciais","Cabeça e Pescoço Paratireoide II - hiperparatireoidismo primário","Cabeça e Pescoço Paratireoide III - hiperparatireoidismo secundário e terciário","Cabeça e Pescoço Paratireoide IV - paratireoidectomia"],
+    5:["Trauma Trauma Cranioencefálico","Trauma Trauma Raquimedular","Trauma Trauma Musculoesquelético","Trauma Encerramento","Cirurgia Plástica Queimados - Atendimento inicial","Cirurgia Plástica Queimados - Tratamento específico","Queimados: Sequelas de Queimadura","Cabeça e Pescoço Anomalias Congênitas em cabeça e pescoço","Cabeça e Pescoço Câncer de pele não melanoma"],
+    6:["Abdome Agudo: Introdução","Abdome Agudo Inflamatório: Apendicite Aguda","Abdome Agudo Inflamatório: Colelitíase","Abdome Agudo Inflamatório: Colecistite","Abdome Agudo Inflamatório: Colecistite - Visão crítica de Segurança","Abdome Agudo Inflamatório: Complicações","Abdome Agudo Inflamatório: Coledocolitíase","Abdome Agudo Inflamatório: Colangite","Urologia: Litíase - Introdução","Urologia: Litíase - Avaliação metabólica","Urologia: Litíase no pronto-socorro","Urologia: Litíase - Tratamento endoscópico de cálculos","Urologia: Litíase - Litotripsia Extracorpórea (LECO)"],
+    7:["Abdome Agudo Inflamatório: Pancreatite Aguda","Abdome Agudo Inflamatório: Diverticulite Aguda","Abdome Agudo Inflamatório: Abscesso Hepático","Abdome Agudo Obstrutivo","Urologia: PS - Escroto Agudo","Urologia: PS - Priapismo","Urologia: PS - Fratura Peniana"],
+    8:["Abdome Agudo Perfurativo","Abdome Agudo Vascular","Abdome Agudo Hemorrágico","Abdome Agudo: Take-Home Message","Urologia: PS - Trauma de Rim e de Ureter","Urologia: PS - Trauma de bexiga","Urologia: PS - Trauma de uretra e estenose de uretra","Urologia: PS - Trauma Genital","Cirurgia plástica: Cicatrização fisiológica","Cirurgia plástica: Cicatrização patológica"],
+    9:["Hérnias: Anatomia da parede abdominal","Hérnias: Hérnia Inguinal","Hérnias: Hernioplastia inguinal","Hérnias: Hernia Femoral","Hérnias: Hérnia Umbilical","Cirurgia Plástica: Lesões por pressão","Cirurgia plástica: Fios de Sutura","Cirurgia plástica: Anestésicos Locais"],
+    11:["Perioperatório: Pré-operatório I","Perioperatório: Pré-operatório II","Estômago: Anatomia e fisiologia","Estômago: Câncer, introdução e linfomas","Estômago: Adenocarcinoma Gástrico","Estômago: Complicações agudas pós gastrectomias","Estômago: GIST","Estômago: Tumores neuroendócrinos"],
+    12:["Perioperatório: REMIT e pós-operatório","Perioperatório: Complicações gerais","Obesidade: Princípios Gerais e Cirurgia Bariátrica","Obesidade: Procedimentos Cirúrgicos","Obesidade: Reganho de peso","Obesidade: Complicações pós bariátrica","Cirurgia Vascular: Aneurisma de aorta I","Cirurgia Vascular: Aneurisma de aorta II","Cirurgia plástica: Enxertos","Cirurgia plástica: Retalhos","Cirurgia Plástica: Principais Retalhos","Cirurgia Plástica: Contorno","Uro-oncologia: Próstata","Uro-oncologia: Bexiga","Uro-oncologia: Rim"],
+    13:["Coloproctologia CA colorretal","Coloproctologia Doenças Orificiais","Coloproctologia Síndromes Associadas ao CCR","Coloproctologia CEC Canal Anal","Urgências endoscópicas HDA não varicosa","Urgências endoscópicas HDA varicosa","Urgências endoscópicas Corpo Estranho","Urgências endoscópicas HDB","Urgências endoscópicas Hemorragia digestiva média","Cirurgia Plástica Fraturas de face","Cirurgia Plástica Paralisia facial","Urologia HPB","Uro-oncologia Testículo","Uro-oncologia Adrenal","Uro-oncologia Pênis"],
+    14:["Cirurgia Geral Respiro e próximos passos","Cirurgia Vascular Trombose venosa profunda","Ortopedia Geral","Ortopedia Traumatologia","Cirurgia Plástica Ferimento descolante","Pâncreas e vias biliares Pólipo de vesícula biliar","Pâncreas e vias biliares Cistos Biliares","Pâncreas e vias biliares Câncer de Vesícula","Pâncreas e vias biliares Lesão Iatrogênica da Via Biliar","Urologia UND e disfunções miccionais","Urologia Síndrome da bexiga hiperativa e bexiga dolorosa","Urologia Bexiga neurogênica","Urologia Incontinência urinária de esforço","Urologia Medicina Sexual","Urologia DSTs","Urologia Infertilidade","Urologia Desafios finais"],
+    15:["Fígado para perdidos","Fígado Adenoma Hepático","Fígado Hiperplasia Nodular Focal","Fígado Hemangioma hepático","Fígado e VB Quiz","Fígado Carcinoma hepatocelular","Fígado Cisto Hepático","Fígado Metástases Hepáticas de CA colorretal - Parte 1","Fígado Metástases Hepáticas de CA colorretal - Parte 2","Cirurgia Torácica Derrame Pleural","Cirurgia Torácica Exsudato Neutrofílico","Cirurgia Torácica Exsudato Linfocítico","Cirurgia Torácica Quilotórax","Cirurgia Vascular Isquemia de membros inferiores - OAA","Cirurgia Vascular Isquemia de membros inferiores - OAC","Cirurgia Vascular Síndromes aórticas agudas","Cirurgia Vascular Trauma Vascular de extremidades","Cirurgia Vascular Trauma Vascular de Aorta","Cirurgia Vascular Trauma Vascular - miscelânea"],
+    16:["Pâncreas e vias biliares Adenocarcinoma de pâncreas","Pâncreas e vias biliares Pancreatite Crônica","Pâncreas e vias biliares Outros tumores Periampulares","Pâncreas e vias biliares Neoplasias Císticas Pancreáticas","Pâncreas e vias biliares Tumores Neuroendócrinos","Oncocirurgia Melanoma","Oncocirurgia Sarcoma","Cirurgia Vascular Estenose Carotídea Sintomática","Cirurgia Vascular Estenose Carotídea Assintomática","Cirurgia Torácica Pneumotórax"],
+    17:["Cirurgia Geral Síndrome de Fournier","Cirurgia Geral Videolaparoscopia","Cirurgia Geral Eletrocirurgia","Doença Inflamatória intestinal - Parte 1","Doença Inflamatória intestinal - Parte 2","Nutrição perioperatória","Tumores do Intestino Delgado","Doenças cirúrgicas do Baço","SII","Endometriose - Cirurgia","Avaliação pré-anestésica","Cirurgia Vascular Insuficiência venosa crônica","Cirurgia Vascular Síndromes compressivas"],
+    18:["Cirurgia Infantil Defeitos da parede abdominal","Cirurgia Infantil Região inguinal e distopias testiculares","Cirurgia Plástica Mama - Ginecomastia","Cirurgia Plástica Mama - Hipertrofia mamária","Cirurgia Plástica Mama - BIA, ALCL e síndrome Asia","Cirurgia Plástica Mama - Reconstrução de mama"],
+    19:["Cirurgia Infantil Vômitos no RN / lactente","Cirurgia Infantil CIPE no PS","Endoscopia Preparo de Cólon","Endoscopia Pólipos colorretais","Endoscopia CA colorretal precoce"],
+    20:["Cirurgia Vascular Pé diabético","Cirurgia Vascular Vasculites","Cirurgia Vascular Síndrome do desfiladeiro torácico","Cirurgia Torácica Câncer de Pulmão parte 1","Cirurgia Torácica Câncer de Pulmão parte 2","Cirurgia Torácica Câncer de Pulmão parte 3","Cirurgia Torácica Câncer de Pulmão Quiz"],
+    21:["Cirurgia Torácica Mediastino","Cirurgia Torácica Complicações Mediastinais","Monitorização em anestesia (Profundidade anestésica, Junção neuromuscular, Capnografia e Oximetria)","Técnicas anestésicas 1 Anestesia geral (agentes opióides, indutores e BNM)","Técnicas anestésicas 2 Anestésicos locais e anestesia regional (bloqueios de nervo periférico)","Técnicas anestésicas 3 Bloqueio de neuroeixo (Raquianestesia e Peridural)"],
+    22:["Cirurgia Infantil Atresia de esôfago e doença da via biliar","Cirurgia Infantil Tórax pediátrico","Cirurgia Torácica Doenças Traqueais","Cirurgia Torácica Bronquiectasias e hemoptise","Cirurgia Cardíaca Pós-Operatório","Cirurgia Cardíaca Transplante Cardíaco","Cirurgia Cardíaca Doenças congênitas"],
+    23:["Cirurgia Infantil Doenças cervicais na infância","Cirurgia Infantil Tumores da infância","Cirurgia Infantil Anomalias de Cólon e Reto","Cirurgia Torácica Bônus Doenças da Parede Torácica","Cirurgia Torácica Quiz Doenças Traqueais","Cirurgia Torácica Quiz Doenças de Parede Torácica","Cirurgia Torácica Quiz Bronquiectasia e hemoptise","Cirurgia Cardíaca Doença da Aorta","Cirurgia Cardíaca Doença coronariana","Cirurgia Cardíaca Doenças Valvares"],
+    24:["Distúrbios do assoalho pélvico","Cisto pilonidal","Neurocirurgia Emergências neurocirúrgicas","Neurocirurgia Demais assuntos","Cirurgia Resumão Encerramento"]
+  },
+  clinica:{
+    1:["Doencas Virais e Pandemicas","Arboviroses Clinica Medica","Ictericias febris e Febre Maculosa","Hepatites Virais Clinica Medica","Parasitoses Intestinais Clinica Medica"],
+    2:["Doenças Oportunistas HIV","Antibióticos I","Antibióticos II","HIV","Dispepsia","DRGE","Avaliação de Enzimas Hepáticas","Doenças Hepáticas: CBP, CEP, HAI e Doença de Wilson"],
+    3:["Introdução às Cefaleias Primárias","Enxaqueca (Migrânea)","Cefaleias Trigêmino-Autonômicas","Síndrome Coronariana Aguda sem Supra de ST (SCASSST)","Síndrome Coronariana Aguda com Supra de ST (SCACSST)","Síndromes Aórticas Agudas","Pericardite e Miocardite","Intoxicações Exógenas"],
+    4:["Diabetes: Classificação, Fisiopatologia e Diagnóstico","Meta Terapêutica, Manejo do pré-DM e Tratamento Não Farmacológico do DM","Antidiabéticos Orais e Subcutâneos - Parte 1","Antidiabéticos Orais e Subcutâneos - Parte 2","Insulinoterapia","Complicações Crônicas do Diabetes Mellitus (DM)","Hiperglicemia Hospitalar","Emergências Hiperglicêmicas (CAD e EHH)"],
+    5:["Introdução às Artrites e Artrite Reumatoide (AR)","Espondiloartrites","Artrites Microcristalinas (Gota e CPPD)","Osteoartrite","Fibromialgia","Gasometria Arterial I","Gasometria Arterial II","Rastreamentos - Clínica Médica","Oncologia: Cuidados paliativos"],
+    6:["Distúrbios do Sódio","Distúrbios do Potássio","Introdução à Geriatria","Avaliação Geriátrica Ampla","Iatrogenia no Idoso","Instabilidade Postural, Quedas e Imobilidade","Vacinação do Idoso"],
+    7:["Emergências Hipertensivas","Hipertensão Arterial Sistêmica (HAS)","Insuficiência Cardíaca - Manejo Ambulatorial","Insuficiência Cardíaca - Descompensações Agudas","Meningites & Encefalites","Síndrome de Guillain-Barré (SGB)","Miastenia Gravis","Dislipidemia - Classificação e Diagnóstico","Tratamento das Dislipidemias","Doença hepática esteatótica Metabólica (DHEM)"],
+    8:["Sífilis e Uretrites Infecciosas","Neurossífilis","Úlcera péptica, H. pylori, Gastrite Atrófica e Dispepsia Funcional","Cirrose hepática: Conceitos Gerais","Cirrose hepática: Ascite + PBE","Disfagia, Esofagite Eosinofílica e Acalasias","Alergia 1: Rinite e Angioedema","Alergia 2: Reações de hipersensibilidade","Emergências Oncológicas"],
+    9:["Síndrome Metabólica","Obesidade: Introdução e Tratamento Não Farmacológico","Obesidade: Tratamento Farmacológico e Cirúrgico","Pneumonia: Adquirida na Comunidade","Derrame Pleural","Asma","Doença Pulmonar Obstrutiva Crônica (DPOC)","Tabagismo","Espirometria"],
+    11:["Anemias Hemolíticas Adquiridas","Anemias Hemolíticas Hereditárias","Púrpura Trombocitopênica Trombótica (PTT)","BLS e ACLS","Taquiarritmias - Cardiologia","Bradiarritimias","Síncope","Febre Reumática e Endocardite","Valvopatias"],
+    12:["Tuberculose Pulmonar","Tratamento de Tuberculose e efeitos colaterais do RIPE","Tuberculose Extra Pulmonar","Choque - Abordagem Inicial","Choque - Tipos de Choque","Infecção de Corrente Sanguínea (ICS)","Analgesia e Sedação","Drogas vasoativas (DVA)"],
+    13:["Injúria Renal Aguda (IRA) Parte 1","Injúria Renal Aguda (IRA) Parte 2","Diarreia Agudas e Colite Pseudomembranosa","Doença Inflamatória Intestinal (DII)","Diarreias Crônicas","Doenças Negligenciadas","Vacinação - Situações Especiais","Acidentes com Animais Peçonhentos"],
+    14:["Lúpus Eritematoso Sistêmico - Clínica Médica","Osteoporose","Esclerose Sistêmica","Doença de Sjögren","Miopatias Autoimunes Sistêmicas - Clínica Médica","Glomerulopatias I","Glomerulopatias II","Hipercalcemias","Hipocalcemias"],
+    15:["Fisiologia da Tireoide","Hipotireoidismo - Clínica Médica","Hipertireoidismo","Tireoidites & Síndrome do Eutireoidiano Doente","Nódulos e Câncer de Tireoide","Epilepsia","Doença de Parkinson","Esclerose Múltipla (EM)","Neuromielite Óptica (NMO)"],
+    16:["TEP","Hipertensão pulmonar","Distúrbios do Sono","Doença Pulmonar Intersticial (DPI)","Nódulo Pulmonar","Fisiologia e Anatomia da Adrenal","Incidentaloma Adrenal","Síndrome de Cushing","Insuficiência Adrenal"],
+    17:["Infecção do Trato Urinário (ITU)","Distúrbios do Cálcio","Distúrbios Hidroeletrolíticos - Outros (Magnésio e Fósforo)","Doença Renal Crônica I","Doença Renal Crônica II"],
+    18:["Depressão no Idoso","Insuficiência Cognitiva Demências","Insuficiência Cognitiva Delirium no Idoso","Fragilidade","Incontinência Urinária no Idoso","Fisiologia da Coagulação","Distúrbios da Hemostasia","Hemoterapia"],
+    19:["Doenças Virais e Pandêmicas","Arboviroses - Clínica Médica","Icterícias febris e Febre Maculosa","Hepatites Virais - Clínica Médica","Parasitoses Intestinais - Clínica Médica"],
+    20:["Hiperaldosteronismo Primário","Feocromocitoma","Leucemias","Linfomas","Discrasias Plasmocitárias","Síndromes Medulares"],
+    21:["Hanseníase","Lesões Elementares","Dermatoses Bolhosas","Psoríase","Prolactinomas"],
+    22:["Emergências psiquiátricas","Transtorno de Humor I","Transtorno de Humor II Antidepressivos","Transtorno de Humor III Mania e Transtorno Bipolar"],
+    23:["Transtorno de Ansiedade","Transtornos Relacionados a Substâncias - Álcool","Transtorno Psicótico","Transtorno alimentares e somatoformes","Transtorno de personalidade","Otologia I","Otologia II","Oftalmologia para o generalista - parte I"],
+    24:["Rinologia","Bucofaringolaringologia I","Bucofaringolaringologia II","Oftalmologia para o generalista - parte II"]
+  },
+  go:{
+    1:["Sindrome Climatérica","Terapia de Reposicao Hormonal","Hiperplasia Endometrial","Cancer de Endometrio"],
+    2:["Anatomia Pélvica Feminina","Embriologia do Sistema Genital Feminino","Malformações Mullerianas"],
+    3:["Estática Fetal","Assistência ao Parto","Mecanismo de Parto"],
+    4:["Fisiologia Menstrual","Amenorreia Primária","Esteroidogênese"],
+    5:["Amenorreia Secundária","Síndrome dos Ovários Policísticos","Hiperprolactinemia"],
+    6:["Abortamento","Gestação Ectópica","Doença Trofoblástica Gestacional","Aborto Legal"],
+    7:["Placenta Prévia","Descolamento Prematuro de Placenta","Outros Sangramentos de Segunda Metade da Gestação"],
+    8:["Propedêutica Mamária","Principais Sintomas em Mastologia","Classificação das Lesões Benignas"],
+    9:["Propedêutica em Uroginecologia","Incontinência Urinária de Esforço","Incontinência Urinária de Urgência","Prolapso Genital","Estudo Urodinâmico"],
+    10:["Propedêutica Mamária","Principais Sintomas em Mastologia","Classificação das Lesões Benignas"],
+    11:["Corrimentos Vaginais","Úlceras Genitais","Violência Sexual","Doença Inflamatória Pélvica Aguda"],
+    12:["Avaliação de Vitalidade Fetal","Sofrimento Fetal Agudo","Restrição de Crescimento Intrauterino","Sofrimento Fetal Crônico"],
+    13:["Anticoncepção Fundamentos","Anticoncepção Métodos Disponíveis","Anticoncepção em Situações Especiais","Cuidado à Saúde LGBTQIAPN+"],
+    14:["Trabalho de Parto Prematuro","Colo Curto e Incompetência Istmocervical","Gemelaridade"],
+    15:["Sangramento Uterino Anormal - Fundamentos","Sangramento Uterino Anormal - Leiomioma","Sangramento Uterino Anormal - Adenomiose","Endometriose"],
+    16:["Hemorragia pós parto","Puerpério Fisiológico","Puerpério Patológico","Distúrbios Psiquiátricos na Gestação e Pós parto"],
+    17:["Alterações Colpocitológicas e Condutas","Câncer de Colo de Útero","Doenças da Vulva e da Vagina"],
+    18:["Câncer de Mama Rastreamento","Câncer de Mama Fatores de Risco e CDIS","Câncer de Mama Doença invasiva","Tumores Anexiais","Câncer de Ovário"],
+    19:["Síndrome Climatérica","Terapia de Reposição Hormonal","Hiperplasia Endometrial","Câncer de Endométrio"],
+    20:["Infertilidade","Técnicas de Reprodução Assistida"],
+    21:["Puberdade Precoce e Tardia","Diferenças no Desenvolvimento Sexual"],
+    22:["Cirurgia ginecológica","Outras Urgências Ginecológicas"],
+    23:["Trombofilias na Gestação e Puerpério","Doença Hemolítica Perinatal"],
+    24:["Malformações Congênitas","Rastreamento de Aneuploidias","Procedimentos Invasivos em Medicina Fetal"]
+  },
+  pediatria:{
+    1:["Politrauma Afogamento e Queimadura","TCE Grave e Morte encefalica"],
+    2:["Febre sem Sinais Localizatórios","Nefro 1: Síndrome Nefrítica, Nefrótica, Síndrome Hemolítico Urêmica","Nefro 2: Doença Renal Crônica e Lesão Renal Aguda","Nefro 3: Miscelânea"],
+    3:["Reanimação Neonatal","Infecções Congênitas","Icterícia e Colestase Neonatal"],
+    4:["Crescimento e Baixa Estatura","Obesidade e Síndrome Metabólica","Puberdade","Desnutrição e Vitaminas","Pediatria Geral"],
+    5:["Pneumonias","Bronquiolite e Coqueluche","Infecção de Trato Urinário (ITU)","COVID"],
+    6:["Hemato 1: Introdução às Anemias e Hemocomponentes","Hemato 2: Anemia Falciforme","Hemato 3: Anemia Ferropriva e Talassemia","Hemato 4: Hemostasia e Distúrbios Hemorrágicos"],
+    7:["Diarreia Aguda","Genética","Infecções de Vias Aéreas Superiores (IVAS)","Suporte Avançado de Vida em Pediatria (PALS)"],
+    8:["Dermato 1: Dermatite Atópica e Lesões Benignas do Recém-Nascido","Dermato 2: Dermatoses e Infecções de Partes Moles","Dermato 3: Farmacodermias","Distúrbio Hidroeletrolítico","Distúrbio Ácido Básico"],
+    9:["Gastro 1: Alergia Alimentar, Refluxo e Constipação","Gastro 2: Diarreia Crônica e Doenças Funcionais","Gastro 3 : Hepato na Emergência","Convulsões na Emergência e Traumatismo Cranioencefálico Leve","Violência Contra a Criança e o Adolescente","Cuidados Paliativos em Pediatria"],
+    10:["Dermato 1: Dermatite Atópica e Lesões Benignas do Recém-Nascido","Dermato 2: Dermatoses e Infecções de Partes Moles","Dermato 3: Farmacodermias","Distúrbio Hidroeletrolítico","Distúrbio Ácido Básico"],
+    11:["Arboviroses - Pediatria","Doenças Exantemáticas","Onco 1: Tumores e Leucemias"],
+    12:["Triagens Neonatais","Distúrbios Metabólicos Neonatais","Intoxicações e Peçonhentos","Ingestão e Aspiração de Corpo Estranho e BRUE"],
+    13:["Tuberculose","Adenomegalias","Infecções Fúngicas","Imunodeficiências para o Pediatra"],
+    14:["Reumato Kawasaki, Vasculite por Iga e Febre Reumática","Artrite Idiopática Juvenil","Ortopedia Pediátrica"],
+    15:["Vacinação 1 - Pediatria","Vacinação 2","Meningite e Encefalite","HIV - Pediatria","Síndromes Febris","Hepatites Virais - Pediatria"],
+    16:["Cetoacidose Diabética (CAD)","Hiperplasia Adrenal Congênita (HAC)","Hipotireoidismo","Diferenças no Desenvolvimento Sexual","Nutrologia em Pediatria"],
+    17:["Pneumo 1: Asma","Pneumo 2: Fibrose Cística e Diferenciais","Medicina do Adolescente","Ética em Pediatria - Parte 1","Ética em Pediatria - Parte 2"],
+    18:["Sepse Neonatal","Desconforto Respiratório Neonatal","Outras Doenças Neonatais","Nutrição do Pré-Termo"],
+    19:["Politrauma, Afogamento e Queimadura","TCE Grave e Morte encefálica"],
+    20:["Sedoanalgesia e Sequência Rápida de Intubação","Insuficiência Respiratória e Síndrome do Desconforto Respiratório Agudo Pediátrico (PARDS)","Ventilação Mecânica"],
+    21:["Cefaleias na Infância","Hipertensão Intracraniana e Hidrocefalia","Epilepsias na Infância Parte 1","Epilepsias na Infância Parte 2","Epilepsias na Infância Parte 3"],
+    22:["Psiquiatria da Infância e Adolescência","Sono e seus Distúrbios","Malformações do Sistema Nervoso","Doenças Neuromusculares na Infância"],
+    24:["Oftalmo Pediatria 1","Oftalmo Pediatria 2 Doenças Pediátricas","Otorrino Pediatria 1","Otorrino Pediatria 2"]
+  },
+  preventiva:{
+    1:["Medicina do trabalho acidente de trabalho","Abordagem Comunitaria"],
+    2:["Testes Diagnósticos: características básicas","Indicadores de Saúde: Parte 2","Rastreamentos - Preventiva","Prevenção Quaternária e P5"],
+    3:["Testes Diagnósticos: aplicabilidade clínica","Determinação Social do Processo Saúde-Doença e Promoção de Saúde","Problemas, Políticas e Sistemas de Saúde"],
+    4:["Redes de Atenção à Saúde e Níveis de Atenção","Teste Diagnósticos Exercícios"],
+    5:["Classificação dos estudos epidemiológicos","Associação x causalidade","Atenção Primária à Saúde - Parte 1","Atenção Primária à Saúde - Parte 2"],
+    6:["Estudos longitudinais: corte e caso controle","Estudos transversais"],
+    7:["Princípios do SUS","Pré-SUS: Modelos de Proteção Social e História da Saúde no Brasil"],
+    8:["Lei Orgânica de Saúde: 8080/90","Lei Orgânica de Saúde : 8142/90"],
+    9:["NOBs e NOAS","Pacto pela Saúde"],
+    10:["Lei Orgânica de Saúde: 8080/90","Lei Orgânica de Saúde : 8142/90"],
+    11:["Saúde Suplementar","Financiamento do SUS","Ensaio clínico 1","Ensaio clínico 2","Ética em pesquisa clínica"],
+    12:["Conceitos de MBE","metanálise","revisão sistematica"],
+    13:["Estratégia Saúde da Família I organização e funcionamento Parte 1","Estratégia Saúde da Família I organização e funcionamento Parte 2"],
+    14:["Estratégia Saúde da Família II Financiamento e Programas Especiais","Princípios da Medicina de Família e comunidade"],
+    15:["Ferramentas da APS/ESF I - Parte 1","Ferramentas da APS/ESF I - Parte 2 : Equipes e-MULTI","Ferramentas da APS/ESF II"],
+    16:["Habilidades de Comunicação - Parte 1","Habilidades de Comunicação - Parte 2"],
+    17:["Vigilância em Saúde","MCCP - Método Clínico Centrado na Pessoa","ReSOAP"],
+    18:["Processo epidêmico","Abordagem Familiar"],
+    19:["Medicina do trabalho acidente de trabalho","Abordagem Comunitária"],
+    20:["Saúde do trabalhador Pneumoconioses","Saúde Planetária","Foca na APS Infectologia Tuberculose e Hanseníase","Foca na APS Clínica Médica Geral"],
+    21:["Medicina legal Declaração de óbito, atestados e laudos","Políticas Públicas de Saúde I Populações Especiais (Saúde Indígena, População Negra e População LGBTQIA+)","Foca na APS Endocrino Diabetes, síndrome metabólica e dislipidemia","Foca na APS Cardiologia Risco CV e HAS"],
+    22:["Ética médica","Saúde do trabalhador intoxicações, pairo e burnout","Políticas Públicas de Saúde II Políticas Setoriais","Foca na APS Pediatria","Foca na APS Sífilis na gestação"],
+    23:["Políticas Especificas Reforma Psiquiátrica e RAPS - Rede de Atenção Psicossocial","Saúde do trabalhador lesões musculoesqueléticas","Saúde do trabalhador dermatoses","Foca na APS GO Anticoncepção e sigilo médico","Foca na APS Rastreamento em ginecologia e climatério"],
+    24:["Outros Tópicos de Saúde Coletiva Avaliação em Saúde Tecnologia em Saúde e Segurança do Paciente","Foca na APS Imunizações na gestação e assistência ao pré-natal","Foca na APS Psiquiatria"]
+  },
+  neurocomp:{
+    "Módulo Neuro-Ped":["Alteracoes no Neurodesenvolvimento","Bases da Neurociencia","Neurologia Fetal e Neonatal","Alteracoes na Forma e Volume do Cranio","Paralisia Cerebral e Outros Disturbios do Movimento","Neoplasias de Sistema Nervoso Central","Ataxias na Infancia","Doencas Desmielinizantes e Encefalite Autoimune","Neurovascular Infantil","Sindromes Neurocutaneas na Infancia","Erros Inatos do Metabolismo e Doencas Neurodegenerativas","Doencas Sistemicas com Acometimento do Sistema Nervoso Central"]
+  }
+};
+
+const AREA_COLORS={cirurgia:'#e05252',clinica:'#4a90e2',go:'#9b6fe0',pediatria:'#3db87a',preventiva:'#f0a832',neurocomp:'#e06bb0'};
+const AREA_LABELS={cirurgia:'Cirurgia',clinica:'Clínica Médica',go:'GO',pediatria:'Pediatria',preventiva:'Preventiva',neurocomp:'Neuro/Comp.'};
+const SK='medcof_v3';
+
+let checked={};
+try{checked=JSON.parse(localStorage.getItem(SK))||{};}catch(e){}
+const save=()=>{try{localStorage.setItem(SK,JSON.stringify(checked));}catch(e){}};
+const aulaKey=(a,b,i)=>`${a}__${b}__${i}`;
+
+// BUILD UI
+function renderAll(){
+  Object.keys(DATA).forEach(area=>{
+    const cont=document.getElementById(`blocos-${area}`);if(!cont)return;
+    Object.keys(DATA[area]).forEach(bloco=>{cont.appendChild(makeCard(area,bloco,DATA[area][bloco]));});
+  });
+  updateAllProgress();
+}
+
+function makeCard(area,bloco,aulas){
+  const card=document.createElement('div');
+  card.className=`bloco-card ${area}`;card.dataset.area=area;
+
+  const hdr=document.createElement('div');hdr.className='bloco-header';
+  hdr.innerHTML=`<div class="bloco-left"><div class="bloco-mini-wrap"><div class="bloco-mini-bg"><div class="bloco-mini-fill" id="mini-${area}-${bloco}" style="width:0%"></div></div></div><span class="bloco-label">Bloco ${bloco}</span></div><div class="bloco-right"><span class="bloco-frac" id="frac-${area}-${bloco}">0/${aulas.length}</span><svg class="bloco-arrow" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>`;
+
+  const body=document.createElement('div');body.className='bloco-body';
+  aulas.forEach((aula,i)=>{
+    const key=aulaKey(area,bloco,i);
+    const div=document.createElement('div');
+    div.className=`aula-item ${area}`;div.dataset.key=key;div.dataset.text=aula.toLowerCase();
+    if(checked[key]) div.classList.add('done');
+    div.innerHTML=`<div class="aula-check"><svg fill="none" stroke="white" stroke-width="3" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5"/></svg></div><span class="aula-name">${aula}</span>`;
+    div.addEventListener('click',()=>{
+      if(checked[div.dataset.key]){delete checked[div.dataset.key];div.classList.remove('done');}
+      else{checked[div.dataset.key]=1;div.classList.add('done');}
+      save();updateCardProgress(area,bloco,aulas);updateAreaProgress(area);updateGlobalPill();
+      if(!document.getElementById('page-dashboard').classList.contains('active')) return;
+      refreshDash();
+    });
+    body.appendChild(div);
+  });
+
+  hdr.addEventListener('click',()=>{hdr.classList.toggle('open');body.classList.toggle('open');});
+  card.appendChild(hdr);card.appendChild(body);
+  return card;
+}
+
+const countDone=(area,bloco,aulas)=>aulas.filter((_,i)=>checked[aulaKey(area,bloco,i)]).length;
+function countArea(area){let d=0,t=0;Object.keys(DATA[area]).forEach(b=>{const a=DATA[area][b];t+=a.length;d+=countDone(area,b,a);});return{d,t};}
+
+function updateCardProgress(area,bloco,aulas){
+  const d=countDone(area,bloco,aulas),t=aulas.length,pct=t?Math.round(d/t*100):0;
+  const m=document.getElementById(`mini-${area}-${bloco}`);const f=document.getElementById(`frac-${area}-${bloco}`);
+  if(m)m.style.width=pct+'%';if(f)f.textContent=`${d}/${t}`;
+}
+function updateAreaProgress(area){
+  const{d,t}=countArea(area);const pct=t?Math.round(d/t*100):0;
+  const b=document.getElementById(`bar-${area}`);const p=document.getElementById(`pct-${area}`);
+  if(b)b.style.width=pct+'%';if(p)p.textContent=pct+'%';
+}
+function updateAllProgress(){Object.keys(DATA).forEach(a=>{Object.keys(DATA[a]).forEach(b=>updateCardProgress(a,b,DATA[a][b]));updateAreaProgress(a);});updateGlobalPill();}
+function getGlobal(){let d=0,t=0;Object.keys(DATA).forEach(a=>{const r=countArea(a);d+=r.d;t+=r.t;});return{d,t,pct:t?Math.round(d/t*100):0};}
+function updateGlobalPill(){document.getElementById('globalPct').textContent=getGlobal().pct+'%';}
+
+// SEARCH
+let searchTerm='',activeArea='all';
+function applyFilters(){
+  let total=0;
+  document.querySelectorAll('.area-section').forEach(sec=>{
+    const area=sec.dataset.area;
+    if(activeArea!=='all'&&activeArea!==area){sec.classList.add('hidden');return;}
+    sec.classList.remove('hidden');
+    let vis=0;
+    sec.querySelectorAll('.bloco-card').forEach(card=>{
+      let cv=false;
+      card.querySelectorAll('.aula-item').forEach(item=>{
+        const nm=item.querySelector('.aula-name');
+        const rawText=item.dataset.text;
+        if(!searchTerm||rawText.includes(searchTerm)){
+          item.style.display='';
+          if(searchTerm){const t=nm.textContent;nm.innerHTML=t.replace(new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),'<mark>$1</mark>');}
+          else{nm.textContent=nm.textContent;}
+          cv=true;
+        }else{item.style.display='none';}
+      });
+      card.style.display=cv?'':'none';
+      if(cv){vis++;total++;
+        const h=card.querySelector('.bloco-header'),bdy=card.querySelector('.bloco-body');
+        if(searchTerm){h.classList.add('open');bdy.classList.add('open');}
+        else{h.classList.remove('open');bdy.classList.remove('open');}
+      }
+    });
+    sec.style.display=vis?'':'none';
+  });
+  document.getElementById('noResults').classList.toggle('visible',total===0);
+}
+document.getElementById('searchInput').addEventListener('input',e=>{searchTerm=e.target.value.toLowerCase().trim();applyFilters();});
+document.querySelectorAll('.fbtn').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.fbtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');activeArea=b.dataset.area;applyFilters();
+}));
+
+// TABS
+document.querySelectorAll('.nav-tab').forEach(tab=>tab.addEventListener('click',()=>{
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  tab.classList.add('active');document.getElementById('page-'+tab.dataset.tab).classList.add('active');
+  if(tab.dataset.tab==='dashboard')refreshDash();
+}));
+
+// RESET
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(!confirm('Tem certeza? Todo o progresso será apagado.'))return;
+  checked={};save();
+  document.querySelectorAll('.aula-item.done').forEach(el=>el.classList.remove('done'));
+  updateAllProgress();
+  if(document.getElementById('page-dashboard').classList.contains('active'))refreshDash();
+});
+
+// CHARTS
+let cDonut=null,cBar=null,cRadar=null;
+Chart.defaults.color='#5c6480';Chart.defaults.font.family='DM Sans';
+
+function refreshDash(){
+  const{d,t,pct}=getGlobal();
+  document.getElementById('s-total').textContent=t;
+  document.getElementById('s-done').textContent=d;
+  document.getElementById('s-pct').textContent=pct+'%';
+  document.getElementById('s-rest').textContent=t-d;
+
+  const areas=Object.keys(DATA);
+  const ad=areas.map(a=>countArea(a));
+  const dones=ad.map(x=>x.d),tots=ad.map(x=>x.t),pcts=ad.map(x=>x.t?Math.round(x.d/x.t*100):0);
+  const colors=areas.map(a=>AREA_COLORS[a]);
+
+  // breakdown
+  const bd=document.getElementById('areaBreakdown');bd.innerHTML='';
+  areas.forEach((a,i)=>{
+    const row=document.createElement('div');row.className='ab-row';
+    row.innerHTML=`<div class="ab-dot" style="background:${colors[i]}"></div><span class="ab-name">${AREA_LABELS[a]}</span><div class="ab-bar-bg"><div class="ab-bar-fill" style="width:${pcts[i]}%;background:${colors[i]}"></div></div><span class="ab-nums">${dones[i]}/${tots[i]}</span>`;
+    bd.appendChild(row);
+  });
+
+  // donut
+  if(cDonut)cDonut.destroy();
+  cDonut=new Chart(document.getElementById('chartDonut').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:['Assistidas','Restantes'],datasets:[{data:[d,t-d],backgroundColor:['#4a90e2','#1f2433'],borderColor:['#4a90e2','#252a38'],borderWidth:2}]},
+    options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw}`}}},animation:{duration:500}},
+    plugins:[{id:'ct',beforeDraw(ch){const{width:w,height:h,ctx:c}=ch;c.save();c.font=`800 ${w*.2}px Syne`;c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(pct+'%',w/2,h/2-7);c.font=`400 ${w*.085}px DM Sans`;c.fillStyle='#5c6480';c.fillText('concluído',w/2,h/2+h*.13);c.restore();}}]
+  });
+
+  // bar
+  if(cBar)cBar.destroy();
+  cBar=new Chart(document.getElementById('chartBar').getContext('2d'),{
+    type:'bar',
+    data:{labels:areas.map(a=>AREA_LABELS[a]),datasets:[{label:'Assistidas',data:dones,backgroundColor:colors,borderRadius:4,borderSkipped:false},{label:'Restantes',data:ad.map(x=>x.t-x.d),backgroundColor:'rgba(31,36,51,.9)',borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5c6480',font:{size:10}}},y:{stacked:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5c6480',font:{size:10}}}},plugins:{legend:{display:false}}}
+  });
+
+  // radar
+  if(cRadar)cRadar.destroy();
+  cRadar=new Chart(document.getElementById('chartRadar').getContext('2d'),{
+    type:'radar',
+    data:{labels:areas.map(a=>AREA_LABELS[a]),datasets:[{label:'%',data:pcts,backgroundColor:'rgba(74,144,226,.12)',borderColor:'#4a90e2',borderWidth:2,pointBackgroundColor:colors,pointRadius:4}]},
+    options:{responsive:true,scales:{r:{min:0,max:100,grid:{color:'rgba(255,255,255,.06)'},angleLines:{color:'rgba(255,255,255,.06)'},pointLabels:{color:'#8890ac',font:{size:10}},ticks:{display:false}}},plugins:{legend:{display:false}}}
+  });
+}
+
+renderAll();
+</script>
+</body>
+</html>
